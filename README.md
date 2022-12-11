@@ -1,6 +1,6 @@
 # aws_kinesis_example
 
-Here is an example of a python program that pulls data from an AWS Kinesis stream and writes it to an AWS Redshift SQL table using AWS Secrets Manager to store the credentials:
+Here is an example of a python program that pulls data from an AWS Kinesis stream and writes it to an AWS Redshift SQL table using AWS Secrets Manager to store the credentials --> `main.py`
 
 This program assumes that the secrets for the Redshift database are stored in AWS Secrets Manager in the following format:
 
