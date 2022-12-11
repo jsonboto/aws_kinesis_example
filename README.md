@@ -4,7 +4,7 @@ Here is an example of a python program that pulls data from an AWS Kinesis strea
 
 This program assumes that the secrets for the Redshift database are stored in AWS Secrets Manager in the following format:
 
-`
+```json
 {
     "username": "username",
     "password": "password",
@@ -12,6 +12,6 @@ This program assumes that the secrets for the Redshift database are stored in AW
     "port": "port",
     "dbname": "dbname"
 }
-`
+```
 
 You will need to replace my_stream and my_table with the appropriate names for your Kinesis stream and Redshift table. You will also need to specify the structure of the data in the Redshift table (i.e. the names and data types of the columns) in the INSERT INTO statement.
