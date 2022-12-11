@@ -1,75 +1,42 @@
 import boto3
-import os
 import psycopg2
 
-# Set the environment variables for your Kinesis stream and Redshift cluster
-os.environ['KINESIS_STREAM_NAME'] = 'my-kinesis-stream'
-os.environ['REDSHIFT_CLUSTER_ENDPOINT'] = 'my-cluster.abc123.us-east-1.redshift.amazonaws.com'
-os.environ['REDSHIFT_CLUSTER_PORT'] = '5439'
-os.environ['REDSHIFT_USERNAME'] = 'my-username'
-os.environ['REDSHIFT_PASSWORD'] = 'my-password'
+# Get the secrets for the Redshift database from AWS Secrets Manager
+secrets_manager = boto3.client("secretsmanager")
+secrets = secrets_manager.get_secret_value(SecretId="redshift_secrets")
 
-# Create a Kinesis client
-kinesis_client = boto3.client('kinesis')
+# Parse the secrets
+username = secrets["username"]
+password = secrets["password"]
+host = secrets["host"]
+port = secrets["port"]
+dbname = secrets["dbname"]
 
-# Get the shard iterator
-response = kinesis_client.get_shard_iterator(
-    StreamName=os.environ['KINESIS_STREAM_NAME'],
-    ShardId='shardId-000000000000', # Replace with the actual shard ID
-    ShardIteratorType='TRIM_HORIZON'
-)
-shard_iterator = response['ShardIterator']
-
-# Create a Redshift client
-redshift_client = boto3.client('redshift')
-
-# Connect to the Redshift cluster
+# Create a connection to the Redshift database
 conn = psycopg2.connect(
-    host=os.environ['REDSHIFT_CLUSTER_ENDPOINT'],
-    port=os.environ['REDSHIFT_CLUSTER_PORT'],
-    user=os.environ['REDSHIFT_USERNAME'],
-    password=os.environ['REDSHIFT_PASSWORD'],
-    dbname='dev'
+    host=host,
+    port=port,
+    dbname=dbname,
+    user=username,
+    password=password
 )
 
-# Set up the cursor
+# Create a cursor object to execute queries
 cur = conn.cursor()
 
-# Create the table
-cur.execute("""
-    CREATE TABLE IF NOT EXISTS my_table (
-        field1 VARCHAR(255),
-        field2 VARCHAR(255),
-        field3 VARCHAR(255)
-    )
-""")
+# Get the Kinesis Streams client
+kinesis_client = boto3.client("kinesis")
 
-# Loop to read records from the Kinesis stream
-while True:
-    # Get the records from the stream
-    response = kinesis_client.get_records(
-        ShardIterator=shard_iterator,
-        Limit=10
-    )
+# Get the data from the Kinesis stream
+response = kinesis_client.get_records(StreamName="my_stream")
+records = response["Records"]
 
-    # Process the records
-    records = response['Records']
-    if records:
-        for record in records:
-            data = record['Data'].decode('utf-8')
-            fields = data.split(',')
+# Iterate over the records and insert them into the Redshift table
+for record in records:
+    cur.execute("INSERT INTO my_table VALUES (%s, %s)", (record["column1"], record["column2"]))
 
-            # Insert the data into the table
-            cur.execute("""
-                INSERT INTO my_table (field1, field2, field3)
-                VALUES (%s, %s, %s)
-            """, (fields[0], fields[1], fields[2]))
-
-        # Commit the changes to the table
-        conn.commit()
-
-    # Get the next shard iterator
-    shard_iterator = response['NextShardIterator']
+# Commit the changes to the Redshift table
+conn.commit()
 
 # Close the cursor and connection
 cur.close()
