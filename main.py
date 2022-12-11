@@ -1,43 +1,27 @@
 import boto3
-import psycopg2
+import json
 
-# Get the secrets for the Redshift database from AWS Secrets Manager
-secrets_manager = boto3.client("secretsmanager")
-secrets = secrets_manager.get_secret_value(SecretId="redshift_secrets")
+# Set up AWS Secrets Manager client
+secrets_manager = boto3.client('secretsmanager')
 
-# Parse the secrets
-username = secrets["username"]
-password = secrets["password"]
-host = secrets["host"]
-port = secrets["port"]
-dbname = secrets["dbname"]
+# Set up AWS Kinesis client
+kinesis = boto3.client('kinesis')
 
-# Create a connection to the Redshift database
-conn = psycopg2.connect(
-    host=host,
-    port=port,
-    dbname=dbname,
-    user=username,
-    password=password
-)
+# Set up AWS Redshift client
+redshift = boto3.client('redshift')
 
-# Create a cursor object to execute queries
-cur = conn.cursor()
+# Retrieve the credentials from AWS Secrets Manager
+secret = secrets_manager.get_secret_value(SecretId='my-secrets')
+secrets = json.loads(secret['SecretString'])
 
-# Get the Kinesis Streams client
-kinesis_client = boto3.client("kinesis")
+# Use the credentials to connect to AWS Kinesis and AWS Redshift
+kinesis.connect(aws_access_key_id=secrets['access_key'], aws_secret_access_key=secrets['secret_key'])
+redshift.connect(dbname=secrets['database'], host=secrets['host'], port=secrets['port'], user=secrets['user'], password=secrets['password'])
 
-# Get the data from the Kinesis stream
-response = kinesis_client.get_records(StreamName="my_stream")
-records = response["Records"]
+# Pull data from the AWS Kinesis stream
+response = kinesis.get_records(StreamName='my-stream')
+data = response['Records']
 
-# Iterate over the records and insert them into the Redshift table
-for record in records:
-    cur.execute("INSERT INTO my_table VALUES (%s, %s)", (record["column1"], record["column2"]))
-
-# Commit the changes to the Redshift table
-conn.commit()
-
-# Close the cursor and connection
-cur.close()
-conn.close()
+# Insert the data into the AWS Redshift SQL table
+for record in data:
+    redshift.execute("INSERT INTO my_table VALUES (%s, %s)", record['field1'], record['field2'])
