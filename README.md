@@ -1,6 +1,6 @@
 # aws_kinesis_example
 
-`main.py` is an example Python program using AWS Secrets Manager to hold credentials for all AWS services and pull data from an AWS Kinesis stream, then write it to an AWS Redshift SQL table.
+The file `main.py` is an example Python program using AWS Secrets Manager to hold credentials for all AWS services and pull data from an AWS Kinesis stream, then write it to an AWS Redshift SQL table.
 
 This code assumes that you have already stored the necessary credentials and connection information for your AWS services in AWS Secrets Manager. It uses the `boto3` library to interact with AWS services and the `json` library to parse the secret values from AWS Secrets Manager.
 
